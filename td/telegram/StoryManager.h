@@ -14,6 +14,7 @@
 #include "td/telegram/MediaArea.h"
 #include "td/telegram/MessageEntity.h"
 #include "td/telegram/MessageFullId.h"
+#include "td/telegram/QuickReplyMessageFullId.h"
 #include "td/telegram/ReactionType.h"
 #include "td/telegram/StoryDb.h"
 #include "td/telegram/StoryFullId.h"
@@ -227,6 +228,9 @@ class StoryManager final : public Actor {
                   td_api::object_ptr<td_api::inputStoryAreas> &&input_areas,
                   td_api::object_ptr<td_api::formattedText> &&input_caption, Promise<Unit> &&promise);
 
+  void edit_story_cover(DialogId owner_dialog_id, StoryId story_id, double main_frame_timestamp,
+                        Promise<Unit> &&promise);
+
   void set_story_privacy_settings(StoryId story_id, td_api::object_ptr<td_api::StoryPrivacySettings> &&settings,
                                   Promise<Unit> &&promise);
 
@@ -252,6 +256,17 @@ class StoryManager final : public Actor {
                                    Promise<td_api::object_ptr<td_api::chatActiveStories>> &&promise);
 
   void reload_dialog_expiring_stories(DialogId dialog_id);
+
+  void search_hashtag_posts(string hashtag, string offset, int32 limit,
+                            Promise<td_api::object_ptr<td_api::foundStories>> &&promise);
+
+  void search_location_posts(td_api::object_ptr<td_api::locationAddress> &&address, string offset, int32 limit,
+                             Promise<td_api::object_ptr<td_api::foundStories>> &&promise);
+
+  void search_venue_posts(string venue_provider, string venue_id, string offset, int32 limit,
+                          Promise<td_api::object_ptr<td_api::foundStories>> &&promise);
+
+  void set_pinned_stories(DialogId owner_dialog_id, vector<StoryId> story_ids, Promise<Unit> &&promise);
 
   void open_story(DialogId owner_dialog_id, StoryId story_id, Promise<Unit> &&promise);
 
@@ -331,14 +346,16 @@ class StoryManager final : public Actor {
 
   int32 get_story_duration(StoryFullId story_full_id) const;
 
-  void register_story(StoryFullId story_full_id, MessageFullId message_full_id, const char *source);
+  void register_story(StoryFullId story_full_id, MessageFullId message_full_id,
+                      QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
-  void unregister_story(StoryFullId story_full_id, MessageFullId message_full_id, const char *source);
+  void unregister_story(StoryFullId story_full_id, MessageFullId message_full_id,
+                        QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
   td_api::object_ptr<td_api::story> get_story_object(StoryFullId story_full_id) const;
 
-  td_api::object_ptr<td_api::stories> get_stories_object(int32 total_count,
-                                                         const vector<StoryFullId> &story_full_ids) const;
+  td_api::object_ptr<td_api::stories> get_stories_object(int32 total_count, const vector<StoryFullId> &story_full_ids,
+                                                         const vector<StoryId> &pinned_story_ids) const;
 
   FileSourceId get_story_file_source_id(StoryFullId story_full_id);
 
@@ -363,6 +380,8 @@ class StoryManager final : public Actor {
   class LoadDialogExpiringStoriesLogEvent;
   class SendStoryLogEvent;
   class EditStoryLogEvent;
+
+  static constexpr int32 MAX_SEARCH_STORIES = 100;  // server-side limit
 
   static constexpr int32 OPENED_STORY_POLL_PERIOD = 60;
   static constexpr int32 VIEWED_STORY_POLL_PERIOD = 300;
@@ -649,6 +668,9 @@ class StoryManager final : public Actor {
   WaitFreeHashSet<StoryFullId, StoryFullIdHash> failed_to_load_story_full_ids_;
 
   WaitFreeHashMap<StoryFullId, WaitFreeHashSet<MessageFullId, MessageFullIdHash>, StoryFullIdHash> story_messages_;
+
+  WaitFreeHashMap<StoryFullId, WaitFreeHashSet<QuickReplyMessageFullId, QuickReplyMessageFullIdHash>, StoryFullIdHash>
+      story_quick_reply_messages_;
 
   WaitFreeHashMap<DialogId, unique_ptr<ActiveStories>, DialogIdHash> active_stories_;
 

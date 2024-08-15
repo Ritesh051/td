@@ -42,7 +42,6 @@ configure_file(td/utils/config.h.in td/utils/config.h @ONLY)
 
 add_subdirectory(generate)
 
-# TDUTILS
 set_source_files_properties(${TDMIME_AUTO} PROPERTIES GENERATED TRUE)
 if (CLANG OR GCC)
   set_property(SOURCE ${TDMIME_AUTO} APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-conversion")
@@ -107,6 +106,7 @@ set(TDUTILS_SOURCE
   td/utils/Gzip.cpp
   td/utils/GzipByteFlow.cpp
   td/utils/Hints.cpp
+  td/utils/HttpDate.cpp
   td/utils/HttpUrl.cpp
   td/utils/JsonBuilder.cpp
   td/utils/logging.cpp
@@ -138,8 +138,8 @@ set(TDUTILS_SOURCE
   td/utils/port/EventFdBase.h
   td/utils/port/FileFd.h
   td/utils/port/FromApp.h
-  td/utils/port/IPAddress.h
   td/utils/port/IoSlice.h
+  td/utils/port/IPAddress.h
   td/utils/port/MemoryMapping.h
   td/utils/port/Mutex.h
   td/utils/port/path.h
@@ -212,8 +212,8 @@ set(TDUTILS_SOURCE
   td/utils/ExitGuard.h
   td/utils/FileLog.h
   td/utils/filesystem.h
-  td/utils/fixed_vector.h
   td/utils/find_boundary.h
+  td/utils/fixed_vector.h
   td/utils/FlatHashMap.h
   td/utils/FlatHashMapChunks.h
   td/utils/FlatHashSet.h
@@ -231,6 +231,7 @@ set(TDUTILS_SOURCE
   td/utils/HazardPointers.h
   td/utils/Heap.h
   td/utils/Hints.h
+  td/utils/HttpDate.h
   td/utils/HttpUrl.h
   td/utils/int_types.h
   td/utils/invoke.h
@@ -243,8 +244,8 @@ set(TDUTILS_SOURCE
   td/utils/MovableValue.h
   td/utils/MpmcQueue.h
   td/utils/MpmcWaiter.h
-  td/utils/MpscPollableQueue.h
   td/utils/MpscLinkQueue.h
+  td/utils/MpscPollableQueue.h
   td/utils/Named.h
   td/utils/NullLog.h
   td/utils/ObjectPool.h
@@ -347,7 +348,6 @@ set(TDUTILS_TEST_SOURCE
   PARENT_SCOPE
 )
 
-#LIBRARIES
 add_library(tdutils STATIC ${TDUTILS_SOURCE})
 
 if (NOT CMAKE_CROSSCOMPILING AND TDUTILS_MIME_TYPE)

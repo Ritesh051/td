@@ -6,7 +6,7 @@ if (POLICY CMP0065)
   cmake_policy(SET CMP0065 NEW)
 endif()
 
-project(TDLib VERSION 1.8.26 LANGUAGES CXX C)
+project(TDLib VERSION 1.8.35 LANGUAGES CXX C)
 
 if (NOT DEFINED CMAKE_MODULE_PATH)
   set(CMAKE_MODULE_PATH "")
@@ -72,7 +72,7 @@ if (POLICY CMP0069)
   endif()
 endif()
 
-# Configure CCache if available
+# Configure Ccache if available
 find_program(CCACHE_FOUND ccache)
 #set(CCACHE_FOUND 0)
 if (CCACHE_FOUND)
@@ -168,13 +168,13 @@ add_subdirectory(tdutils)
 add_subdirectory(td/generate)
 
 if (NOT CMAKE_CROSSCOMPILING)
-  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_common tdmime_auto tl_generate_json)
+  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_mtproto tl_generate_common tdmime_auto tl_generate_json)
   if (TD_ENABLE_DOTNET)
     add_custom_target(remove_cpp_documentation
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
       COMMAND remove_documentation ${TL_TD_API_AUTO_SOURCE} td/telegram/Client.h td/telegram/Log.h td/tl/TlObject.h
       COMMENT "Remove C++ documentation from sources"
-      DEPENDS remove_documentation tl_generate_common generate_dotnet_api ${TL_TD_API_AUTO_SOURCE} td/telegram/Client.h td/telegram/Log.h td/tl/TlObject.h
+      DEPENDS remove_documentation tl_generate_mtproto tl_generate_common generate_dotnet_api ${TL_TD_API_AUTO_SOURCE} td/telegram/Client.h td/telegram/Log.h td/tl/TlObject.h
     )
 
     add_dependencies(prepare_cross_compiling generate_dotnet_api remove_cpp_documentation)
@@ -221,7 +221,7 @@ if (HAS_PARENT)
 endif()
 
 
-#SOURCE SETS
+# SOURCE SETS
 
 set_source_files_properties(${TL_TD_API_AUTO_SOURCE} PROPERTIES GENERATED TRUE)
 if (TD_ENABLE_JNI OR ANDROID)
@@ -239,13 +239,9 @@ set(TL_TD_API_SOURCE
   td/tl/TlObject.h
 )
 
+set_source_files_properties(${TL_MTPROTO_AUTO_SOURCE} PROPERTIES GENERATED TRUE)
+
 set_source_files_properties(${TL_TD_AUTO_SOURCE} PROPERTIES GENERATED TRUE)
-set(TL_TD_SCHEME_SOURCE
-  ${TL_TD_AUTO_SOURCE}
-  td/tl/TlObject.h
-  td/tl/tl_object_parse.h
-  td/tl/tl_object_store.h
-)
 
 set_source_files_properties(${TL_TD_JSON_AUTO_SOURCE} PROPERTIES GENERATED TRUE)
 set(TL_TD_JSON_SOURCE
@@ -264,7 +260,7 @@ set(TL_DOTNET_SCHEME_SOURCE
   td/tl/tl_dotnet_object.h
 )
 
-set(TDLIB_SOURCE
+set(TD_MTPROTO_SOURCE
   td/mtproto/AuthData.cpp
   td/mtproto/ConnectionManager.cpp
   td/mtproto/DhHandshake.cpp
@@ -285,6 +281,44 @@ set(TDLIB_SOURCE
   td/mtproto/Transport.cpp
   td/mtproto/utils.cpp
 
+  td/mtproto/AuthData.h
+  td/mtproto/AuthKey.h
+  td/mtproto/ConnectionManager.h
+  td/mtproto/CryptoStorer.h
+  td/mtproto/DhCallback.h
+  td/mtproto/DhHandshake.h
+  td/mtproto/Handshake.h
+  td/mtproto/HandshakeActor.h
+  td/mtproto/HandshakeConnection.h
+  td/mtproto/HttpTransport.h
+  td/mtproto/IStreamTransport.h
+  td/mtproto/KDF.h
+  td/mtproto/MessageId.h
+  td/mtproto/MtprotoQuery.h
+  td/mtproto/NoCryptoStorer.h
+  td/mtproto/PacketInfo.h
+  td/mtproto/PacketStorer.h
+  td/mtproto/Ping.h
+  td/mtproto/PingConnection.h
+  td/mtproto/ProxySecret.h
+  td/mtproto/RawConnection.h
+  td/mtproto/RSA.h
+  td/mtproto/SessionConnection.h
+  td/mtproto/TcpTransport.h
+  td/mtproto/TlsInit.h
+  td/mtproto/TlsReaderByteFlow.h
+  td/mtproto/Transport.h
+  td/mtproto/TransportType.h
+  td/mtproto/utils.h
+
+  ${TL_MTPROTO_AUTO_SOURCE}
+
+  td/tl/TlObject.h
+  td/tl/tl_object_parse.h
+  td/tl/tl_object_store.h
+)
+
+set(TDLIB_SOURCE_PART1
   td/telegram/AccountManager.cpp
   td/telegram/AnimationsManager.cpp
   td/telegram/Application.cpp
@@ -296,6 +330,8 @@ set(TDLIB_SOURCE
   td/telegram/BackgroundInfo.cpp
   td/telegram/BackgroundManager.cpp
   td/telegram/BackgroundType.cpp
+  td/telegram/BaseTheme.cpp
+  td/telegram/Birthdate.cpp
   td/telegram/BoostManager.cpp
   td/telegram/BotCommand.cpp
   td/telegram/BotCommandScope.cpp
@@ -303,9 +339,13 @@ set(TDLIB_SOURCE
   td/telegram/BotMenuButton.cpp
   td/telegram/BusinessAwayMessage.cpp
   td/telegram/BusinessAwayMessageSchedule.cpp
+  td/telegram/BusinessBotManageBar.cpp
+  td/telegram/BusinessChatLink.cpp
   td/telegram/BusinessConnectedBot.cpp
+  td/telegram/BusinessConnectionManager.cpp
   td/telegram/BusinessGreetingMessage.cpp
   td/telegram/BusinessInfo.cpp
+  td/telegram/BusinessIntro.cpp
   td/telegram/BusinessManager.cpp
   td/telegram/BusinessRecipients.cpp
   td/telegram/BusinessWorkHours.cpp
@@ -315,13 +355,14 @@ set(TDLIB_SOURCE
   td/telegram/CallManager.cpp
   td/telegram/ChannelParticipantFilter.cpp
   td/telegram/ChannelRecommendationManager.cpp
+  td/telegram/ChatManager.cpp
   td/telegram/ChatReactions.cpp
   td/telegram/ClientActor.cpp
   td/telegram/CommonDialogManager.cpp
   td/telegram/ConfigManager.cpp
   td/telegram/ConnectionState.cpp
+  td/telegram/ConnectionStateManager.cpp
   td/telegram/Contact.cpp
-  td/telegram/ContactsManager.cpp
   td/telegram/CountryInfoManager.cpp
   td/telegram/DelayDispatcher.cpp
   td/telegram/Dependencies.cpp
@@ -356,17 +397,18 @@ set(TDLIB_SOURCE
   td/telegram/EmojiGroup.cpp
   td/telegram/EmojiGroupType.cpp
   td/telegram/EmojiStatus.cpp
+  td/telegram/FactCheck.cpp
   td/telegram/FileReferenceManager.cpp
   td/telegram/files/FileBitmask.cpp
   td/telegram/files/FileDb.cpp
   td/telegram/files/FileDownloader.cpp
+  td/telegram/files/FileDownloadManager.cpp
   td/telegram/files/FileEncryptionKey.cpp
   td/telegram/files/FileFromBytes.cpp
   td/telegram/files/FileGcParameters.cpp
   td/telegram/files/FileGcWorker.cpp
   td/telegram/files/FileGenerateManager.cpp
   td/telegram/files/FileHashUploader.cpp
-  td/telegram/files/FileLoader.cpp
   td/telegram/files/FileLoaderUtils.cpp
   td/telegram/files/FileLoadManager.cpp
   td/telegram/files/FileManager.cpp
@@ -374,6 +416,7 @@ set(TDLIB_SOURCE
   td/telegram/files/FileStatsWorker.cpp
   td/telegram/files/FileType.cpp
   td/telegram/files/FileUploader.cpp
+  td/telegram/files/FileUploadManager.cpp
   td/telegram/files/PartsManager.cpp
   td/telegram/files/ResourceManager.cpp
   td/telegram/ForumTopic.cpp
@@ -391,7 +434,9 @@ set(TDLIB_SOURCE
   td/telegram/GroupCallParticipantOrder.cpp
   td/telegram/GroupCallVideoPayload.cpp
   td/telegram/HashtagHints.cpp
+  td/telegram/InlineMessageManager.cpp
   td/telegram/InlineQueriesManager.cpp
+  td/telegram/InputBusinessChatLink.cpp
   td/telegram/InputDialogId.cpp
   td/telegram/InputGroupCallId.cpp
   td/telegram/InputInvoice.cpp
@@ -414,10 +459,13 @@ set(TDLIB_SOURCE
   td/telegram/MessageImportManager.cpp
   td/telegram/MessageInputReplyTo.cpp
   td/telegram/MessageOrigin.cpp
+  td/telegram/MessageQuote.cpp
   td/telegram/MessageReaction.cpp
+  td/telegram/MessageReactor.cpp
   td/telegram/MessageReplyHeader.cpp
   td/telegram/MessageReplyInfo.cpp
   td/telegram/MessageSearchFilter.cpp
+  td/telegram/MessageSearchOffset.cpp
   td/telegram/MessageSelfDestructType.cpp
   td/telegram/MessageSender.cpp
   td/telegram/MessagesInfo.cpp
@@ -427,6 +475,9 @@ set(TDLIB_SOURCE
   td/telegram/MessageTtl.cpp
   td/telegram/MessageViewer.cpp
   td/telegram/misc.cpp
+  td/telegram/MissingInvitee.cpp
+)
+set(TDLIB_SOURCE_PART2
   td/telegram/net/AuthDataShared.cpp
   td/telegram/net/ConnectionCreator.cpp
   td/telegram/net/DcAuthManager.cpp
@@ -438,6 +489,7 @@ set(TDLIB_SOURCE
   td/telegram/net/NetQueryDelayer.cpp
   td/telegram/net/NetQueryDispatcher.cpp
   td/telegram/net/NetQueryStats.cpp
+  td/telegram/net/NetQueryVerifier.cpp
   td/telegram/net/NetStatsManager.cpp
   td/telegram/net/Proxy.cpp
   td/telegram/net/PublicRsaKeySharedCdn.cpp
@@ -454,6 +506,7 @@ set(TDLIB_SOURCE
   td/telegram/NotificationSettingsScope.cpp
   td/telegram/NotificationSound.cpp
   td/telegram/NotificationType.cpp
+  td/telegram/OnlineManager.cpp
   td/telegram/OptionManager.cpp
   td/telegram/OrderedMessage.cpp
   td/telegram/OrderInfo.cpp
@@ -469,11 +522,14 @@ set(TDLIB_SOURCE
   td/telegram/Premium.cpp
   td/telegram/PremiumGiftOption.cpp
   td/telegram/PrivacyManager.cpp
+  td/telegram/PromoDataManager.cpp
   td/telegram/QueryCombiner.cpp
   td/telegram/QueryMerger.cpp
   td/telegram/QuickReplyManager.cpp
   td/telegram/ReactionListType.cpp
   td/telegram/ReactionManager.cpp
+  td/telegram/ReactionNotificationSettings.cpp
+  td/telegram/ReactionNotificationsFrom.cpp
   td/telegram/ReactionType.cpp
   td/telegram/RecentDialogList.cpp
   td/telegram/RepliedMessageInfo.cpp
@@ -494,8 +550,12 @@ set(TDLIB_SOURCE
   td/telegram/SendCodeHelper.cpp
   td/telegram/SentEmailCode.cpp
   td/telegram/SequenceDispatcher.cpp
+  td/telegram/SharedDialog.cpp
   td/telegram/SpecialStickerSetType.cpp
   td/telegram/SponsoredMessageManager.cpp
+  td/telegram/StarManager.cpp
+  td/telegram/StarSubscription.cpp
+  td/telegram/StarSubscriptionPricing.cpp
   td/telegram/StateManager.cpp
   td/telegram/StatisticsManager.cpp
   td/telegram/StickerFormat.cpp
@@ -516,10 +576,13 @@ set(TDLIB_SOURCE
   td/telegram/StoryViewer.cpp
   td/telegram/SuggestedAction.cpp
   td/telegram/Support.cpp
+  td/telegram/SynchronousRequests.cpp
   td/telegram/Td.cpp
   td/telegram/TdDb.cpp
   td/telegram/TermsOfService.cpp
+  td/telegram/TermsOfServiceManager.cpp
   td/telegram/ThemeManager.cpp
+  td/telegram/ThemeSettings.cpp
   td/telegram/TimeZoneManager.cpp
   td/telegram/TopDialogCategory.cpp
   td/telegram/TopDialogManager.cpp
@@ -527,6 +590,7 @@ set(TDLIB_SOURCE
   td/telegram/TranscriptionManager.cpp
   td/telegram/TranslationManager.cpp
   td/telegram/UpdatesManager.cpp
+  td/telegram/UserManager.cpp
   td/telegram/Usernames.cpp
   td/telegram/UserPrivacySetting.cpp
   td/telegram/UserPrivacySettingRule.cpp
@@ -537,36 +601,6 @@ set(TDLIB_SOURCE
   td/telegram/WebApp.cpp
   td/telegram/WebPageBlock.cpp
   td/telegram/WebPagesManager.cpp
-
-  td/mtproto/AuthData.h
-  td/mtproto/AuthKey.h
-  td/mtproto/ConnectionManager.h
-  td/mtproto/CryptoStorer.h
-  td/mtproto/DhCallback.h
-  td/mtproto/DhHandshake.h
-  td/mtproto/Handshake.h
-  td/mtproto/HandshakeActor.h
-  td/mtproto/HandshakeConnection.h
-  td/mtproto/HttpTransport.h
-  td/mtproto/IStreamTransport.h
-  td/mtproto/KDF.h
-  td/mtproto/MessageId.h
-  td/mtproto/MtprotoQuery.h
-  td/mtproto/NoCryptoStorer.h
-  td/mtproto/PacketInfo.h
-  td/mtproto/PacketStorer.h
-  td/mtproto/Ping.h
-  td/mtproto/PingConnection.h
-  td/mtproto/ProxySecret.h
-  td/mtproto/RawConnection.h
-  td/mtproto/RSA.h
-  td/mtproto/SessionConnection.h
-  td/mtproto/TcpTransport.h
-  td/mtproto/TlsInit.h
-  td/mtproto/TlsReaderByteFlow.h
-  td/mtproto/Transport.h
-  td/mtproto/TransportType.h
-  td/mtproto/utils.h
 
   td/telegram/AccentColorId.h
   td/telegram/AccessRights.h
@@ -583,6 +617,8 @@ set(TDLIB_SOURCE
   td/telegram/BackgroundInfo.h
   td/telegram/BackgroundManager.h
   td/telegram/BackgroundType.h
+  td/telegram/BaseTheme.h
+  td/telegram/Birthdate.h
   td/telegram/BlockListId.h
   td/telegram/BoostManager.h
   td/telegram/BotCommand.h
@@ -591,30 +627,36 @@ set(TDLIB_SOURCE
   td/telegram/BotMenuButton.h
   td/telegram/BusinessAwayMessage.h
   td/telegram/BusinessAwayMessageSchedule.h
+  td/telegram/BusinessBotManageBar.h
+  td/telegram/BusinessChatLink.h
   td/telegram/BusinessConnectedBot.h
+  td/telegram/BusinessConnectionId.h
+  td/telegram/BusinessConnectionManager.h
   td/telegram/BusinessGreetingMessage.h
   td/telegram/BusinessInfo.h
+  td/telegram/BusinessIntro.h
   td/telegram/BusinessManager.h
   td/telegram/BusinessRecipients.h
   td/telegram/BusinessWorkHours.h
   td/telegram/CallActor.h
+  td/telegram/CallbackQueriesManager.h
   td/telegram/CallDiscardReason.h
   td/telegram/CallId.h
   td/telegram/CallManager.h
-  td/telegram/CallbackQueriesManager.h
   td/telegram/ChainId.h
   td/telegram/ChannelId.h
   td/telegram/ChannelParticipantFilter.h
   td/telegram/ChannelRecommendationManager.h
   td/telegram/ChannelType.h
   td/telegram/ChatId.h
+  td/telegram/ChatManager.h
   td/telegram/ChatReactions.h
   td/telegram/ClientActor.h
   td/telegram/CommonDialogManager.h
   td/telegram/ConfigManager.h
   td/telegram/ConnectionState.h
+  td/telegram/ConnectionStateManager.h
   td/telegram/Contact.h
-  td/telegram/ContactsManager.h
   td/telegram/CountryInfoManager.h
   td/telegram/CustomEmojiId.h
   td/telegram/DelayDispatcher.h
@@ -635,9 +677,9 @@ set(TDLIB_SOURCE
   td/telegram/DialogFilterId.h
   td/telegram/DialogFilterInviteLink.h
   td/telegram/DialogFilterManager.h
-  td/telegram/DialogInviteLinkManager.h
   td/telegram/DialogId.h
   td/telegram/DialogInviteLink.h
+  td/telegram/DialogInviteLinkManager.h
   td/telegram/DialogListId.h
   td/telegram/DialogLocation.h
   td/telegram/DialogManager.h
@@ -657,12 +699,14 @@ set(TDLIB_SOURCE
   td/telegram/EmojiGroupType.h
   td/telegram/EmojiStatus.h
   td/telegram/EncryptedFile.h
+  td/telegram/FactCheck.h
   td/telegram/FileReferenceManager.h
   td/telegram/files/FileBitmask.h
   td/telegram/files/FileData.h
   td/telegram/files/FileDb.h
   td/telegram/files/FileDbId.h
   td/telegram/files/FileDownloader.h
+  td/telegram/files/FileDownloadManager.h
   td/telegram/files/FileEncryptionKey.h
   td/telegram/files/FileFromBytes.h
   td/telegram/files/FileGcParameters.h
@@ -671,7 +715,6 @@ set(TDLIB_SOURCE
   td/telegram/files/FileHashUploader.h
   td/telegram/files/FileId.h
   td/telegram/files/FileLoaderActor.h
-  td/telegram/files/FileLoader.h
   td/telegram/files/FileLoaderUtils.h
   td/telegram/files/FileLoadManager.h
   td/telegram/files/FileLocation.h
@@ -681,6 +724,7 @@ set(TDLIB_SOURCE
   td/telegram/files/FileStatsWorker.h
   td/telegram/files/FileType.h
   td/telegram/files/FileUploader.h
+  td/telegram/files/FileUploadManager.h
   td/telegram/files/PartsManager.h
   td/telegram/files/ResourceManager.h
   td/telegram/files/ResourceState.h
@@ -702,7 +746,9 @@ set(TDLIB_SOURCE
   td/telegram/GroupCallParticipantOrder.h
   td/telegram/GroupCallVideoPayload.h
   td/telegram/HashtagHints.h
+  td/telegram/InlineMessageManager.h
   td/telegram/InlineQueriesManager.h
+  td/telegram/InputBusinessChatLink.h
   td/telegram/InputDialogId.h
   td/telegram/InputGroupCallId.h
   td/telegram/InputInvoice.h
@@ -722,6 +768,7 @@ set(TDLIB_SOURCE
   td/telegram/MessageContentType.h
   td/telegram/MessageCopyOptions.h
   td/telegram/MessageDb.h
+  td/telegram/MessageEffectId.h
   td/telegram/MessageEntity.h
   td/telegram/MessageExtendedMedia.h
   td/telegram/MessageForwardInfo.h
@@ -731,10 +778,13 @@ set(TDLIB_SOURCE
   td/telegram/MessageInputReplyTo.h
   td/telegram/MessageLinkInfo.h
   td/telegram/MessageOrigin.h
+  td/telegram/MessageQuote.h
   td/telegram/MessageReaction.h
+  td/telegram/MessageReactor.h
   td/telegram/MessageReplyHeader.h
   td/telegram/MessageReplyInfo.h
   td/telegram/MessageSearchFilter.h
+  td/telegram/MessageSearchOffset.h
   td/telegram/MessageSelfDestructType.h
   td/telegram/MessageSender.h
   td/telegram/MessagesInfo.h
@@ -746,6 +796,7 @@ set(TDLIB_SOURCE
   td/telegram/MessageViewer.h
   td/telegram/MinChannel.h
   td/telegram/misc.h
+  td/telegram/MissingInvitee.h
   td/telegram/net/AuthDataShared.h
   td/telegram/net/AuthKeyState.h
   td/telegram/net/ConnectionCreator.h
@@ -761,6 +812,7 @@ set(TDLIB_SOURCE
   td/telegram/net/NetQueryDelayer.h
   td/telegram/net/NetQueryDispatcher.h
   td/telegram/net/NetQueryStats.h
+  td/telegram/net/NetQueryVerifier.h
   td/telegram/net/NetStatsManager.h
   td/telegram/net/NetType.h
   td/telegram/net/Proxy.h
@@ -768,8 +820,8 @@ set(TDLIB_SOURCE
   td/telegram/net/PublicRsaKeySharedMain.h
   td/telegram/net/PublicRsaKeyWatchdog.h
   td/telegram/net/Session.h
-  td/telegram/net/SessionProxy.h
   td/telegram/net/SessionMultiProxy.h
+  td/telegram/net/SessionProxy.h
   td/telegram/net/TempAuthKeyWatchdog.h
   td/telegram/NewPasswordState.h
   td/telegram/Notification.h
@@ -782,11 +834,12 @@ set(TDLIB_SOURCE
   td/telegram/NotificationManager.h
   td/telegram/NotificationObjectFullId.h
   td/telegram/NotificationObjectId.h
-  td/telegram/NotificationSettingsScope.h
   td/telegram/NotificationSettingsManager.h
+  td/telegram/NotificationSettingsScope.h
   td/telegram/NotificationSound.h
   td/telegram/NotificationSoundType.h
   td/telegram/NotificationType.h
+  td/telegram/OnlineManager.h
   td/telegram/OptionManager.h
   td/telegram/OrderedMessage.h
   td/telegram/OrderInfo.h
@@ -804,6 +857,7 @@ set(TDLIB_SOURCE
   td/telegram/Premium.h
   td/telegram/PremiumGiftOption.h
   td/telegram/PrivacyManager.h
+  td/telegram/PromoDataManager.h
   td/telegram/PtsManager.h
   td/telegram/PublicDialogType.h
   td/telegram/QueryCombiner.h
@@ -813,6 +867,8 @@ set(TDLIB_SOURCE
   td/telegram/QuickReplyShortcutId.h
   td/telegram/ReactionListType.h
   td/telegram/ReactionManager.h
+  td/telegram/ReactionNotificationSettings.h
+  td/telegram/ReactionNotificationsFrom.h
   td/telegram/ReactionType.h
   td/telegram/ReactionUnavailabilityReason.h
   td/telegram/RecentDialogList.h
@@ -827,8 +883,8 @@ set(TDLIB_SOURCE
   td/telegram/ScheduledServerMessageId.h
   td/telegram/ScopeNotificationSettings.h
   td/telegram/SecretChatActor.h
-  td/telegram/SecretChatId.h
   td/telegram/SecretChatDb.h
+  td/telegram/SecretChatId.h
   td/telegram/SecretChatLayer.h
   td/telegram/SecretChatsManager.h
   td/telegram/SecretInputMedia.h
@@ -840,8 +896,12 @@ set(TDLIB_SOURCE
   td/telegram/SequenceDispatcher.h
   td/telegram/ServerMessageId.h
   td/telegram/SetWithPosition.h
+  td/telegram/SharedDialog.h
   td/telegram/SpecialStickerSetType.h
   td/telegram/SponsoredMessageManager.h
+  td/telegram/StarManager.h
+  td/telegram/StarSubscription.h
+  td/telegram/StarSubscriptionPricing.h
   td/telegram/StateManager.h
   td/telegram/StatisticsManager.h
   td/telegram/StickerFormat.h
@@ -855,9 +915,9 @@ set(TDLIB_SOURCE
   td/telegram/StoryContent.h
   td/telegram/StoryContentType.h
   td/telegram/StoryDb.h
+  td/telegram/StoryForwardInfo.h
   td/telegram/StoryFullId.h
   td/telegram/StoryId.h
-  td/telegram/StoryForwardInfo.h
   td/telegram/StoryInteractionInfo.h
   td/telegram/StoryListId.h
   td/telegram/StoryManager.h
@@ -866,11 +926,14 @@ set(TDLIB_SOURCE
   td/telegram/StoryViewer.h
   td/telegram/SuggestedAction.h
   td/telegram/Support.h
+  td/telegram/SynchronousRequests.h
   td/telegram/Td.h
   td/telegram/TdCallback.h
   td/telegram/TdDb.h
   td/telegram/TermsOfService.h
+  td/telegram/TermsOfServiceManager.h
   td/telegram/ThemeManager.h
+  td/telegram/ThemeSettings.h
   td/telegram/TimeZoneManager.h
   td/telegram/TopDialogCategory.h
   td/telegram/TopDialogManager.h
@@ -880,6 +943,7 @@ set(TDLIB_SOURCE
   td/telegram/UniqueId.h
   td/telegram/UpdatesManager.h
   td/telegram/UserId.h
+  td/telegram/UserManager.h
   td/telegram/Usernames.h
   td/telegram/UserPrivacySetting.h
   td/telegram/UserPrivacySettingRule.h
@@ -898,21 +962,25 @@ set(TDLIB_SOURCE
   td/telegram/AuthManager.hpp
   td/telegram/BackgroundInfo.hpp
   td/telegram/BackgroundType.hpp
+  td/telegram/Birthdate.hpp
   td/telegram/BusinessAwayMessage.hpp
   td/telegram/BusinessAwayMessageSchedule.hpp
   td/telegram/BusinessConnectedBot.hpp
   td/telegram/BusinessGreetingMessage.hpp
   td/telegram/BusinessInfo.hpp
+  td/telegram/BusinessIntro.hpp
   td/telegram/BusinessRecipients.hpp
   td/telegram/BusinessWorkHours.hpp
   td/telegram/ChatReactions.hpp
-  td/telegram/DialogNotificationSettings.hpp
   td/telegram/DialogFilter.hpp
+  td/telegram/DialogInviteLink.hpp
+  td/telegram/DialogNotificationSettings.hpp
   td/telegram/Dimensions.hpp
   td/telegram/Document.hpp
   td/telegram/DocumentsManager.hpp
   td/telegram/DraftMessage.hpp
   td/telegram/EmojiGroup.hpp
+  td/telegram/FactCheck.hpp
   td/telegram/FileReferenceManager.hpp
   td/telegram/files/FileData.hpp
   td/telegram/files/FileId.hpp
@@ -934,7 +1002,9 @@ set(TDLIB_SOURCE
   td/telegram/MessageForwardInfo.hpp
   td/telegram/MessageInputReplyTo.hpp
   td/telegram/MessageOrigin.hpp
+  td/telegram/MessageQuote.hpp
   td/telegram/MessageReaction.hpp
+  td/telegram/MessageReactor.hpp
   td/telegram/MessageReplyInfo.hpp
   td/telegram/MinChannel.hpp
   td/telegram/NotificationGroupInfo.hpp
@@ -946,6 +1016,8 @@ set(TDLIB_SOURCE
   td/telegram/PollManager.hpp
   td/telegram/PremiumGiftOption.hpp
   td/telegram/ReactionManager.hpp
+  td/telegram/ReactionNotificationSettings.hpp
+  td/telegram/ReactionNotificationsFrom.hpp
   td/telegram/ReactionType.hpp
   td/telegram/RepliedMessageInfo.hpp
   td/telegram/ReplyMarkup.hpp
@@ -953,21 +1025,34 @@ set(TDLIB_SOURCE
   td/telegram/ScopeNotificationSettings.hpp
   td/telegram/SecureValue.hpp
   td/telegram/SendCodeHelper.hpp
+  td/telegram/SharedDialog.hpp
+  td/telegram/StarSubscriptionPricing.hpp
   td/telegram/StickerMaskPosition.hpp
   td/telegram/StickerPhotoSize.hpp
   td/telegram/StickersManager.hpp
   td/telegram/StoryForwardInfo.hpp
   td/telegram/StoryInteractionInfo.hpp
   td/telegram/StoryStealthMode.hpp
+  td/telegram/SuggestedAction.hpp
+  td/telegram/TermsOfService.hpp
+  td/telegram/ThemeSettings.hpp
   td/telegram/TranscriptionInfo.hpp
   td/telegram/VideoNotesManager.hpp
   td/telegram/VideosManager.hpp
   td/telegram/VoiceNotesManager.hpp
   td/telegram/WebApp.hpp
 
-  ${TL_TD_SCHEME_SOURCE}
+  ${TL_TD_AUTO_SOURCE}
+
+  td/tl/TlObject.h
+  td/tl/tl_object_parse.h
+  td/tl/tl_object_store.h
 
   ${CMAKE_CURRENT_BINARY_DIR}/td/telegram/GitCommitHash.cpp
+)
+set(TDLIB_SOURCE
+  ${TDLIB_SOURCE_PART1}
+  ${TDLIB_SOURCE_PART2}
 )
 
 set(MEMPROF_SOURCE
@@ -980,7 +1065,7 @@ set(MEMPROF_STAT_SOURCE
   memprof/memprof_stat.h
 )
 
-#LIBRARIES
+# LIBRARIES
 
 # memprof - simple library for memory usage profiling
 add_library(memprof STATIC ${MEMPROF_SOURCE})
@@ -1019,17 +1104,41 @@ if (NOT CMAKE_CROSSCOMPILING)
   add_dependencies(tdapi tl_generate_common)
 endif()
 
-# tdcore - mostly internal TDLib interface. One should use tdactor for interactions with it.
-add_library(tdcore STATIC ${TDLIB_SOURCE})
-target_include_directories(tdcore PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${TL_TD_AUTO_INCLUDE_DIR}>)
-target_include_directories(tdcore SYSTEM PRIVATE ${OPENSSL_INCLUDE_DIR})
-target_link_libraries(tdcore PUBLIC tdapi tdactor tdutils tdnet tddb PRIVATE ${OPENSSL_CRYPTO_LIBRARY} ${CMAKE_DL_LIBS} ${ZLIB_LIBRARIES})
+add_library(tdmtproto STATIC ${TD_MTPROTO_SOURCE})
+target_include_directories(tdmtproto PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${TL_TD_AUTO_INCLUDE_DIR}>)
+target_include_directories(tdmtproto SYSTEM PRIVATE ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(tdmtproto PUBLIC tdactor tdnet tdutils PRIVATE ${OPENSSL_CRYPTO_LIBRARY} ${CMAKE_DL_LIBS} ${ZLIB_LIBRARIES})
 if (WIN32)
   if (MINGW)
-    target_link_libraries(tdcore PRIVATE ws2_32 mswsock crypt32)
+    target_link_libraries(tdmtproto PRIVATE ws2_32 mswsock crypt32)
   else()
-    target_link_libraries(tdcore PRIVATE ws2_32 Mswsock Crypt32)
+    target_link_libraries(tdmtproto PRIVATE ws2_32 Mswsock Crypt32)
   endif()
+endif()
+if (NOT CMAKE_CROSSCOMPILING)
+  add_dependencies(tdmtproto tl_generate_mtproto)
+endif()
+
+# tdcore - internal TDLib interface
+if (MSVC AND TD_ENABLE_LTO)
+  add_library(tdcore_part1 STATIC ${TDLIB_SOURCE_PART1})
+  target_include_directories(tdcore_part1 PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${TL_TD_AUTO_INCLUDE_DIR}>)
+  target_link_libraries(tdcore_part1 PUBLIC tdapi tdnet tddb tdactor tdutils PRIVATE tdmtproto)
+
+  add_library(tdcore_part2 STATIC ${TDLIB_SOURCE_PART2})
+  target_include_directories(tdcore_part2 PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${TL_TD_AUTO_INCLUDE_DIR}>)
+  target_link_libraries(tdcore_part2 PUBLIC tdapi tdnet tddb tdactor tdutils PRIVATE tdmtproto)
+
+  add_library(tdcore INTERFACE)
+  target_link_libraries(tdcore INTERFACE tdcore_part1 tdcore_part2)
+
+  set(TD_CORE_PART_TARGETS tdcore_part1 tdcore_part2)
+else()
+  add_library(tdcore STATIC ${TDLIB_SOURCE})
+  target_include_directories(tdcore PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}> $<BUILD_INTERFACE:${TL_TD_AUTO_INCLUDE_DIR}>)
+  target_link_libraries(tdcore PUBLIC tdapi tdnet tddb tdactor tdutils PRIVATE tdmtproto)
+
+  set(TD_CORE_PART_TARGETS)
 endif()
 
 if (NOT CMAKE_CROSSCOMPILING)
@@ -1073,7 +1182,7 @@ if (TD_ENABLE_DOTNET)
   endif()
 endif()
 
-# tdc - TDLib interface in pure c.
+# tdc - TDLib interface in pure C
 add_library(tdc STATIC EXCLUDE_FROM_ALL ${TL_C_SCHEME_SOURCE} td/telegram/td_c_client.cpp td/telegram/td_c_client.h)
 target_include_directories(tdc PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -1117,6 +1226,7 @@ target_include_directories(tdjson_static PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
+# EXECUTABLES
 if (EMSCRIPTEN)
   set(TD_EMSCRIPTEN_SRC td/telegram/td_emscripten.cpp)
   add_executable(${TD_EMSCRIPTEN} ${TD_EMSCRIPTEN_SRC})
@@ -1124,7 +1234,6 @@ if (EMSCRIPTEN)
   target_link_libraries(${TD_EMSCRIPTEN} PRIVATE tdjson_static tdactor)
 endif()
 
-#EXECUTABLES
 if (NOT CMAKE_CROSSCOMPILING)
   add_executable(tg_cli td/telegram/cli.cpp ${TL_TD_JSON_SOURCE})
 
@@ -1155,7 +1264,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   add_dependencies(tg_cli tl_generate_json)
 endif()
 
-#Exported libraries
+# Exported libraries
 add_library(TdStatic INTERFACE)
 target_link_libraries(TdStatic INTERFACE tdclient)
 
@@ -1170,7 +1279,7 @@ add_library(Td::TdJson ALIAS TdJson)
 add_library(Td::TdJsonStatic ALIAS TdJsonStatic)
 
 set(INSTALL_TARGETS tdjson TdJson)
-set(INSTALL_STATIC_TARGETS tdjson_static TdJsonStatic tdjson_private tdcore)
+set(INSTALL_STATIC_TARGETS tdjson_static TdJsonStatic tdjson_private "${TD_CORE_PART_TARGETS}" tdcore tdmtproto)
 if (BUILD_SHARED_LIBS)
   set(INSTALL_TARGETS ${INSTALL_TARGETS} tdclient TdStatic tdapi)
 else()
@@ -1201,6 +1310,7 @@ generate_pkgconfig(tddb "Telegram Library - Database")
 if (MEMPROF)
   # generate_pkgconfig(memprof "memprof - simple library for memory usage profiling")
 endif()
+generate_pkgconfig(tdmtproto "Telegram Library - MTProto implementation")
 generate_pkgconfig(tdcore "Telegram Library - Core")
 generate_pkgconfig(tdclient "Telegram Library - C++ Interface")
 if (TD_ENABLE_DOTNET)
@@ -1247,6 +1357,4 @@ install(FILES "TdConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/TdConfigVersion.cmak
 )
 
 # Add SOVERSION to shared libraries
-set_property(TARGET tdclient PROPERTY SOVERSION "${TDLib_VERSION}")
-set_property(TARGET tdapi PROPERTY SOVERSION "${TDLib_VERSION}")
-set_property(TARGET tdjson PROPERTY SOVERSION "${TDLib_VERSION}")
+set_property(TARGET tdapi tdclient tdjson PROPERTY SOVERSION "${TDLib_VERSION}")

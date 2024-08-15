@@ -16,6 +16,7 @@
 #include "td/telegram/MessageFullId.h"
 #include "td/telegram/PhotoFormat.h"
 #include "td/telegram/PhotoSize.h"
+#include "td/telegram/QuickReplyMessageFullId.h"
 #include "td/telegram/SecretInputMedia.h"
 #include "td/telegram/SpecialStickerSetType.h"
 #include "td/telegram/StickerFormat.h"
@@ -71,6 +72,8 @@ class StickersManager final : public Actor {
 
   StickerType get_sticker_type(FileId file_id) const;
 
+  StickerFormat get_sticker_format(FileId file_id) const;
+
   bool is_premium_custom_emoji(CustomEmojiId custom_emoji_id, bool default_result) const;
 
   bool have_sticker(StickerSetId sticker_set_id, int64 sticker_id);
@@ -104,19 +107,23 @@ class StickersManager final : public Actor {
 
   tl_object_ptr<telegram_api::InputStickerSet> get_input_sticker_set(StickerSetId sticker_set_id) const;
 
+  void load_premium_gift_sticker_set(Promise<Unit> &&promise);
+
   void register_premium_gift(int32 months, MessageFullId message_full_id, const char *source);
 
   void unregister_premium_gift(int32 months, MessageFullId message_full_id, const char *source);
 
-  void register_dice(const string &emoji, int32 value, MessageFullId message_full_id, const char *source);
+  void register_dice(const string &emoji, int32 value, MessageFullId message_full_id,
+                     QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
-  void unregister_dice(const string &emoji, int32 value, MessageFullId message_full_id, const char *source);
+  void unregister_dice(const string &emoji, int32 value, MessageFullId message_full_id,
+                       QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
   void register_emoji(const string &emoji, CustomEmojiId custom_emoji_id, MessageFullId message_full_id,
-                      const char *source);
+                      QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
   void unregister_emoji(const string &emoji, CustomEmojiId custom_emoji_id, MessageFullId message_full_id,
-                        const char *source);
+                        QuickReplyMessageFullId quick_reply_message_full_id, const char *source);
 
   void get_animated_emoji(string emoji, bool is_recursive,
                           Promise<td_api::object_ptr<td_api::animatedEmoji>> &&promise);
@@ -143,9 +150,6 @@ class StickersManager final : public Actor {
 
   void get_sticker_list_emoji_statuses(StickerListType sticker_list_type, bool force_reload,
                                        Promise<td_api::object_ptr<td_api::emojiStatuses>> &&promise);
-
-  void get_premium_gift_option_sticker(int32 month_count, bool is_recursive,
-                                       Promise<td_api::object_ptr<td_api::sticker>> &&promise);
 
   void get_animated_emoji_click_sticker(const string &message_text, MessageFullId message_full_id,
                                         Promise<td_api::object_ptr<td_api::sticker>> &&promise);
@@ -204,7 +208,7 @@ class StickersManager final : public Actor {
   void reload_special_sticker_set_by_type(SpecialStickerSetType type, bool is_recursive = false);
 
   std::pair<int64, FileId> on_get_sticker_document(tl_object_ptr<telegram_api::Document> &&document_ptr,
-                                                   StickerFormat expected_format);
+                                                   StickerFormat expected_format, const char *source);
 
   void on_get_installed_sticker_sets(StickerType sticker_type,
                                      tl_object_ptr<telegram_api::messages_AllStickers> &&stickers_ptr);
@@ -289,16 +293,15 @@ class StickersManager final : public Actor {
   static td_api::object_ptr<td_api::CheckStickerSetNameResult> get_check_sticker_set_name_result_object(
       CheckStickerSetNameResult result);
 
-  void create_new_sticker_set(UserId user_id, string title, string short_name, StickerFormat sticker_format,
-                              StickerType sticker_type, bool has_text_color,
-                              vector<td_api::object_ptr<td_api::inputSticker>> &&stickers, string software,
-                              Promise<td_api::object_ptr<td_api::stickerSet>> &&promise);
+  void create_new_sticker_set(UserId user_id, string title, string short_name, StickerType sticker_type,
+                              bool has_text_color, vector<td_api::object_ptr<td_api::inputSticker>> &&stickers,
+                              string software, Promise<td_api::object_ptr<td_api::stickerSet>> &&promise);
 
   void add_sticker_to_set(UserId user_id, string short_name, td_api::object_ptr<td_api::inputSticker> &&sticker,
-                          Promise<Unit> &&promise);
+                          td_api::object_ptr<td_api::InputFile> &&old_sticker, Promise<Unit> &&promise);
 
-  void set_sticker_set_thumbnail(UserId user_id, string short_name, tl_object_ptr<td_api::InputFile> &&thumbnail,
-                                 Promise<Unit> &&promise);
+  void set_sticker_set_thumbnail(UserId user_id, string short_name, td_api::object_ptr<td_api::InputFile> &&thumbnail,
+                                 StickerFormat format, Promise<Unit> &&promise);
 
   void set_custom_emoji_sticker_set_thumbnail(string short_name, CustomEmojiId custom_emoji_id,
                                               Promise<Unit> &&promise);
@@ -320,6 +323,9 @@ class StickersManager final : public Actor {
 
   void set_sticker_mask_position(const td_api::object_ptr<td_api::InputFile> &sticker,
                                  td_api::object_ptr<td_api::maskPosition> &&mask_position, Promise<Unit> &&promise);
+
+  void get_created_sticker_sets(StickerSetId offset_sticker_set_id, int32 limit,
+                                Promise<td_api::object_ptr<td_api::stickerSets>> &&promise);
 
   vector<FileId> get_recent_stickers(bool is_attached, Promise<Unit> &&promise);
 
@@ -477,12 +483,12 @@ class StickersManager final : public Actor {
     bool are_keywords_loaded_ = false;  // stored in telegram_api::messages_stickerSet
     bool is_sticker_has_text_color_loaded_ = false;
     bool is_sticker_channel_emoji_status_loaded_ = false;
+    bool is_created_loaded_ = false;
 
     StickerSetId id_;
     int64 access_hash_ = 0;
     string title_;
     string short_name_;
-    StickerFormat sticker_format_ = StickerFormat::Unknown;
     StickerType sticker_type_ = StickerType::Regular;
     int32 sticker_count_ = 0;
     int32 hash_ = 0;
@@ -499,6 +505,7 @@ class StickersManager final : public Actor {
     mutable std::map<string, vector<FileId>> keyword_stickers_map_;         // keyword -> stickers
     FlatHashMap<FileId, vector<string>, FileIdHash> sticker_keywords_map_;  // sticker -> keywords
 
+    bool is_created_ = false;
     bool is_installed_ = false;
     bool is_archived_ = false;
     bool is_official_ = false;
@@ -521,7 +528,6 @@ class StickersManager final : public Actor {
     string title_;
     string short_name_;
     StickerType sticker_type_ = StickerType::Regular;
-    StickerFormat sticker_format_ = StickerFormat::Unknown;
     bool has_text_color_ = false;
     vector<FileId> file_ids_;
     vector<tl_object_ptr<td_api::inputSticker>> stickers_;
@@ -532,7 +538,8 @@ class StickersManager final : public Actor {
   struct PendingAddStickerToSet {
     string short_name_;
     FileId file_id_;
-    tl_object_ptr<td_api::inputSticker> sticker_;
+    td_api::object_ptr<td_api::inputSticker> sticker_;
+    telegram_api::object_ptr<telegram_api::inputDocument> input_document_;
     Promise<Unit> promise_;
   };
 
@@ -591,7 +598,9 @@ class StickersManager final : public Actor {
                                                                                         StickerSetId sticker_set_id,
                                                                                         int64 document_id, double zoom);
 
-  static double get_sticker_set_minithumbnail_zoom(const StickerSet *sticker_set);
+  PhotoFormat get_sticker_set_thumbnail_format(const StickerSet *sticker_set) const;
+
+  double get_sticker_set_minithumbnail_zoom(const StickerSet *sticker_set) const;
 
   td_api::object_ptr<td_api::thumbnail> get_sticker_set_thumbnail_object(const StickerSet *sticker_set) const;
 
@@ -650,8 +659,6 @@ class StickersManager final : public Actor {
   const StickerSet *get_sticker_set(StickerSetId sticker_set_id) const;
 
   StickerSet *add_sticker_set(StickerSetId sticker_set_id, int64 access_hash);
-
-  static PhotoFormat get_sticker_set_thumbnail_format(StickerFormat sticker_format);
 
   static tl_object_ptr<telegram_api::InputStickerSet> get_input_sticker_set(const StickerSet *set);
 
@@ -797,8 +804,7 @@ class StickersManager final : public Actor {
                                                             StickerFormat sticker_format, StickerType sticker_type,
                                                             bool for_thumbnail);
 
-  Result<std::tuple<FileId, bool, bool>> prepare_input_sticker(td_api::inputSticker *sticker,
-                                                               StickerFormat sticker_format, StickerType sticker_type);
+  Result<std::tuple<FileId, bool, bool>> prepare_input_sticker(td_api::inputSticker *sticker, StickerType sticker_type);
 
   tl_object_ptr<telegram_api::inputStickerSetItem> get_input_sticker(const td_api::inputSticker *sticker,
                                                                      FileId file_id) const;
@@ -816,12 +822,15 @@ class StickersManager final : public Actor {
 
   void on_added_sticker_uploaded(int64 random_id, Result<Unit> result);
 
+  StickerFormat guess_sticker_set_format(const StickerSet *sticker_set) const;
+
   void do_add_sticker_to_set(UserId user_id, string short_name, td_api::object_ptr<td_api::inputSticker> &&sticker,
-                             Promise<Unit> &&promise);
+                             td_api::object_ptr<td_api::InputFile> &&old_sticker, Promise<Unit> &&promise);
 
   void on_sticker_set_thumbnail_uploaded(int64 random_id, Result<Unit> result);
 
-  void do_set_sticker_set_thumbnail(UserId user_id, string short_name, tl_object_ptr<td_api::InputFile> &&thumbnail,
+  void do_set_sticker_set_thumbnail(UserId user_id, string short_name,
+                                    td_api::object_ptr<td_api::InputFile> &&thumbnail, StickerFormat format,
                                     Promise<Unit> &&promise);
 
   void do_set_custom_emoji_sticker_set_thumbnail(string short_name, CustomEmojiId custom_emoji_id,
@@ -832,6 +841,9 @@ class StickersManager final : public Actor {
     telegram_api::object_ptr<telegram_api::inputDocument> input_document_;
   };
   Result<StickerInputDocument> get_sticker_input_document(const tl_object_ptr<td_api::InputFile> &sticker) const;
+
+  void on_get_created_sticker_sets(Result<telegram_api::object_ptr<telegram_api::messages_myStickers>> r_my_stickers,
+                                   Promise<td_api::object_ptr<td_api::stickerSets>> &&promise);
 
   bool update_sticker_set_cache(const StickerSet *sticker_set, Promise<Unit> &promise);
 
@@ -913,8 +925,8 @@ class StickersManager final : public Actor {
 
   static const std::map<string, vector<FileId>> &get_sticker_set_keywords(const StickerSet *sticker_set);
 
-  static void find_sticker_set_stickers(const StickerSet *sticker_set, const vector<string> &emojis,
-                                        const string &query, vector<FileId> &result);
+  void find_sticker_set_stickers(const StickerSet *sticker_set, const vector<string> &emojis, const string &query,
+                                 vector<std::pair<bool, FileId>> &result) const;
 
   bool can_find_sticker_by_query(FileId sticker_id, const vector<string> &emojis, const string &query) const;
 
@@ -1122,9 +1134,11 @@ class StickersManager final : public Actor {
   FlatHashMap<int32, unique_ptr<GiftPremiumMessages>> premium_gift_messages_;
 
   FlatHashMap<string, WaitFreeHashSet<MessageFullId, MessageFullIdHash>> dice_messages_;
+  FlatHashMap<string, WaitFreeHashSet<QuickReplyMessageFullId, QuickReplyMessageFullIdHash>> dice_quick_reply_messages_;
 
   struct EmojiMessages {
     WaitFreeHashSet<MessageFullId, MessageFullIdHash> message_full_ids_;
+    WaitFreeHashSet<QuickReplyMessageFullId, QuickReplyMessageFullIdHash> quick_reply_message_full_ids_;
     std::pair<FileId, int> animated_emoji_sticker_;
     FileId sound_file_id_;
   };
@@ -1132,6 +1146,7 @@ class StickersManager final : public Actor {
 
   struct CustomEmojiMessages {
     WaitFreeHashSet<MessageFullId, MessageFullIdHash> message_full_ids_;
+    WaitFreeHashSet<QuickReplyMessageFullId, QuickReplyMessageFullIdHash> quick_reply_message_full_ids_;
     FileId sticker_id_;
   };
   FlatHashMap<CustomEmojiId, unique_ptr<CustomEmojiMessages>, CustomEmojiIdHash> custom_emoji_messages_;

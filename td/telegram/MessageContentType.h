@@ -79,17 +79,25 @@ enum class MessageContentType : int32 {
   GiveawayWinners,
   ExpiredVideoNote,
   ExpiredVoiceNote,
-  BoostApply
+  BoostApply,
+  DialogShared,
+  PaidMedia,
+  PaymentRefunded,
+  GiftStars
 };
 // increase MessageUnsupported::CURRENT_VERSION each time a new message content type is added
 
 StringBuilder &operator<<(StringBuilder &string_builder, MessageContentType content_type);
+
+bool is_allowed_invert_caption_message_content(MessageContentType content_type);
 
 bool is_allowed_media_group_content(MessageContentType content_type);
 
 bool is_homogenous_media_group_content(MessageContentType content_type);
 
 bool can_be_secret_message_content(MessageContentType content_type);
+
+bool can_be_local_message_content(MessageContentType content_type);
 
 bool is_service_message_content(MessageContentType content_type);
 
@@ -98,6 +106,8 @@ bool is_editable_message_content(MessageContentType content_type);
 bool is_supported_reply_message_content(MessageContentType content_type);
 
 bool is_expired_message_content(MessageContentType content_type);
+
+MessageContentType get_expired_message_content_type(MessageContentType content_type);
 
 bool can_have_message_content_caption(MessageContentType content_type);
 
